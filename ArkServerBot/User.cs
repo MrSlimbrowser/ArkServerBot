@@ -13,10 +13,10 @@ namespace ArkServerBot
     {
         public static List<User> users = new List<User>();
 
-        string CustomName { get; }
-        UInt64 DiscordUser { get; }
-        Group Group { get; }
-        string SteamID { get; }
+        public string CustomName { get; }
+        public UInt64 DiscordUser { get; }
+        public Group Group { get; }
+        public string SteamID { get; }
 
         public User(string customName, UInt64 socketUserID, Group group, string steamID)
         {
@@ -55,12 +55,12 @@ namespace ArkServerBot
     {
         public static List<Group> groups = new List<Group>();
 
-        string GroupName { get; }
-        bool CanVoteStartServer { get; }
-        bool CanVoteStopServer { get; }
-        bool CanVoteRestartServer { get; }
-        bool CanVoteDelayUpdate { get; }
-        bool CanKickOtherPlayers { get; }
+        public string GroupName { get; }
+        public bool CanVoteStartServer { get; }
+        public bool CanVoteStopServer { get; }
+        public bool CanVoteRestartServer { get; }
+        public bool CanVoteDelayUpdate { get; }
+        public bool CanKickOtherPlayers { get; }
 
         public Group(string groupName, bool canVoteStartServer = false, bool canVoteStopServer = false
             , bool canVoteRestartServer = false, bool canVoteDelayUpdate = false, bool canKickOtherPlayers = false)

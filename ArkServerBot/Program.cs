@@ -5,6 +5,7 @@ using Discord.WebSocket;
 using Discord.Commands;
 using System.Reflection;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace ArkServerBot
 {
@@ -13,7 +14,8 @@ namespace ArkServerBot
         private DiscordSocketClient _client;
         private CommandService _commandservice = new CommandService();
         private CommandHandler _commandHandler;
-        public const bool isTestAssembly = true;
+        public static bool isTestAssembly = false;
+
 
     //public static string GetPlayerSteamID(SocketUser user)
     //{
@@ -58,8 +60,11 @@ namespace ArkServerBot
         }
         public async Task MainAsync()
         {
-            _client = new DiscordSocketClient();
+#if DEBUG
+            isTestAssembly = true;
+#endif
 
+            _client = new DiscordSocketClient();
             _commandHandler = new CommandHandler(_client, _commandservice);
 
             _client.Log += Log;
@@ -138,7 +143,7 @@ namespace ArkServerBot
             if (Program.isTestAssembly && message.Author.Id != 343156949958787075)
             {
                 await message.Channel.SendMessageAsync("Sorry, I am currently in testmode because Slim is " +
-                    "despairingly trying to improve me... but I'll be there for you again once he is done :)");
+                    "hopelessly trying to improve me... but I'll be there for you again once he is done :)");
                 return;
             }
             else if (message.Channel.GetType().ToString() != "Discord.WebSocket.SocketDMChannel"
@@ -203,60 +208,57 @@ namespace ArkServerBot
         [Command("ShowID")]
         [Summary("Shows discord ID of the mentioned user")]
         [Alias("ID")]
-        public Task ShowID(SocketUser user = null)
+        public Task ShowID(SocketUser socketUser = null)
         {
-            var userInfo = user ?? Context.Message.Author;
-            return ReplyAsync("User: " + userInfo.Username + " | ID: " + userInfo.Id.ToString());
+            var userArg = socketUser ?? Context.Message.Author;
+            return ReplyAsync("User: " + userArg.Username + " | ID: " + userArg.Id.ToString());
         }
 
         [Command("kick")]
         [Summary("Kicks player from all ark servers")]
         public Task KickArkPlayer(SocketUser socketUser = null)
         {
+            // userArg is either the sender or a user specified by an argument
+            // userArgInt is that same user but as an object of the ArkServerBot-Class "User"
+            // sender is the message author just to shorten things from this point on
             var userArg = socketUser ?? Context.Message.Author;
-            var user = User.users.Find(x => x.Equals(userArg.Id)) ?? null;
+            var userArgInt = User.users.Find(x => x.Equals(userArg.Id)) ?? null;
+            var sender = Context.Message.Author;
 
-            if (Context.Message.Author.Equals(userArg))
-
-
-            if (user == null)
+            if (userArgInt == null)
             {
-                Console.WriteLine("Kick player failed because there is no ark player for " + userArg.Username + "#" + userArg.Discriminator);
-                return ReplyAsync("<@" + Context.Message.Author.Id + "> This discord user does not have an ark character or has not been unlocked yet.");
+                Console.WriteLine("Kick player failed because user " + userArg.Username + "#" + userArg.Discriminator + " has not been unlocked for commands yet.");
+                return ReplyAsync("<@" + sender.Id + "> This discord user has not been unlocked for commands yet.");
             }
 
+            userArgInt = userArgInt as User;
+            if (!userArg.Equals(sender) && (userArgInt.Group.CanKickOtherPlayers != true))
+            {
+                Console.WriteLine("Refused kick command from user " + sender.Username + "#" + sender.Discriminator);
+                return ReplyAsync("<@" + sender.Id + "> You have no permission to kick other players.");
+            }
 
+            if (userArgInt.SteamID.Length == 0)
+            {
+                Console.WriteLine("Kick player failed because there is no ark player for " + userArg.Username + "#" + userArg.Discriminator);
+                return ReplyAsync("<@" + sender.Id + "> This user does not have an ark character.");
+            }
 
+            Process proc = new Process();
+            proc.StartInfo = new ProcessStartInfo("arkmanager", "rconcmd \"kickplayer " + userArgInt.SteamID + "\" @all");
+            proc.Start();
+            proc.WaitForExit();
 
-            //if (user != null && ((Context.Message.Author.Id != 343156949958787075) && !Context.Message.Author.Equals(user)))
-            //{
-            //    Console.WriteLine("Refused kick command from user " + Context.Message.Author.Username + "#" + Context.Message.Author.Discriminator);
-            //    return ReplyAsync("<@" + Context.Message.Author.Id + "> You have no permission to kick other players.");
-            //}
-
-            //string arkPlayerSteamID = Program.GetPlayerSteamID(userInfo);
-            //if (arkPlayerSteamID == "0")
-            //{
-            //    Console.WriteLine("Kick player failed because there is no ark player for " + userInfo.Username + "#" + userInfo.Discriminator);
-            //    return ReplyAsync("<@" + Context.Message.Author.Id + "> This discord user does not have an ark character or has not been unlocked yet.");
-            //}
-
-            //Process proc = new Process();
-            //ProcessStartInfo procStartInfo = new ProcessStartInfo("arkmanager", "rconcmd \"kickplayer " + arkPlayerSteamID + "\" @all");
-            //proc.StartInfo = procStartInfo;
-            //proc.Start();
-            //proc.WaitForExit();
-
-            //if (proc.ExitCode == 0)
-            //{
-            //    Console.WriteLine("Kicked player " + userInfo.Username + "#" + userInfo.Discriminator + " from ark servers");
-            //    return ReplyAsync("<@" + userInfo.Id + "> Your character has been kicked from all ark servers of the cluster.");
-            //}
-            //else
-            //{
-            //    Console.WriteLine("Error while trying to kick player " + userInfo.Username + "#" + userInfo.Discriminator);
-            //    return ReplyAsync("<@" + userInfo.Id + "> An unknown error occured... :(");
-            //}
+            if (proc.ExitCode == 0)
+            {
+                Console.WriteLine("Kicked player " + userArg.Username + "#" + userArg.Discriminator + " from ark servers");
+                return ReplyAsync("<@" + userArg.Id + "> Your character has been kicked from all ark servers of the cluster.");
+            }
+            else
+            {
+                Console.WriteLine("Error while trying to kick player " + userArg.Username + "#" + userArg.Discriminator);
+                return ReplyAsync("<@" + userArg.Id + "> An error occured... maybe one of the servers is down? :(");
+            }
         }
     }
 }
