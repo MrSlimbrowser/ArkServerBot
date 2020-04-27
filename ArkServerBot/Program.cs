@@ -15,38 +15,38 @@ namespace ArkServerBot
         private CommandHandler _commandHandler;
         public const bool isTestAssembly = true;
 
-    public static string GetPlayerSteamID(SocketUser user)
-    {
-        switch (user.Id)
-            {
-                case 343156949958787075: // MrSlimbrowser
-                    return "76561198039729283";
-                case 469318430240014338: // billy
-                    return "76561198376251838";
-                case 171370995863650305: // Brownbear
-                    return "76561198091347562";
-                case 371780776246771713: // Cyanide
-                    return "76561197974929457";
-                case 328561358608269323: // Rollo
-                    return "76561198089259919";
-                case 144581855146934273: // rollyrolls
-                    return "76561198168636810";
-                case 136285384073019392: // Solar
-                    return "76561198006677979";
-                case 468961595477983242: // Cody
-                    return "76561198126255307";
-                case 305866447865905152: // Toy
-                    return "76561198104394879";
-                case 131266736908402688: // Queen
-                    return "76561198027404004";
-                case 228754341450874884: // XionX
-                    return "76561197980675897";
-                case 279109755757395968: // clay
-                    return "76561198128127255";
-                default:
-                    return "0";
-            }
-    }
+    //public static string GetPlayerSteamID(SocketUser user)
+    //{
+    //    switch (user.Id)
+    //        {
+    //            case 343156949958787075: // MrSlimbrowser
+    //                return "76561198039729283";
+    //            case 469318430240014338: // billy
+    //                return "76561198376251838";
+    //            case 171370995863650305: // Brownbear
+    //                return "76561198091347562";
+    //            case 371780776246771713: // Cyanide
+    //                return "76561197974929457";
+    //            case 328561358608269323: // Rollo
+    //                return "76561198089259919";
+    //            case 144581855146934273: // rollyrolls
+    //                return "76561198168636810";
+    //            case 136285384073019392: // Solar
+    //                return "76561198006677979";
+    //            case 468961595477983242: // Cody
+    //                return "76561198126255307";
+    //            case 305866447865905152: // Toy
+    //                return "76561198104394879";
+    //            case 131266736908402688: // Queen
+    //                return "76561198027404004";
+    //            case 228754341450874884: // XionX
+    //                return "76561197980675897";
+    //            case 279109755757395968: // clay
+    //                return "76561198128127255";
+    //            default:
+    //                return "0";
+    //        }
+    //}
 
     public static void Main(string[] args)
     => new Program().MainAsync().GetAwaiter().GetResult();
@@ -179,11 +179,11 @@ namespace ArkServerBot
 
         // ReplyAsync is a method on ModuleBase 
 
-        //// ping! pong!
-        //[Command("ping")]
-        //[Summary("Responds Pong!.")]
-        //public Task PingAsync()
-        //    => ReplyAsync("Pong!");
+        // ping! pong!
+        [Command("ping")]
+        [Summary("Responds Pong!.")]
+        public Task PingAsync()
+            => ReplyAsync("Pong!");
 
         [Command("help")]
         [Summary("Returns information about supported commands")]
@@ -200,24 +200,6 @@ namespace ArkServerBot
                 "         Shows your personal unique discord user ID" +
                 "");
 
-        //[Command("test")]
-        //[Summary("function used for tests")]
-        //public Task TestAsync()
-        //{
-        //    Process proc = new Process();
-        //    ProcessStartInfo procStartInfo = new ProcessStartInfo("arkmanager", "status @valguero");
-        //    procStartInfo.RedirectStandardOutput = true;
-        //    proc.StartInfo = procStartInfo;
-        //    proc.Start();
-        //    proc.WaitForExit();
-
-        //    StreamReader reader = proc.StandardOutput;
-        //    string result = reader.ReadToEnd();
-        //    reader.Dispose();
-        //    proc.Dispose();
-        //    return ReplyAsync("test" + result);
-        //}
-
         [Command("ShowID")]
         [Summary("Shows discord ID of the mentioned user")]
         [Alias("ID")]
@@ -229,39 +211,52 @@ namespace ArkServerBot
 
         [Command("kick")]
         [Summary("Kicks player from all ark servers")]
-        public Task KickArkPlayer(SocketUser user = null)
+        public Task KickArkPlayer(SocketUser socketUser = null)
         {
-            var userInfo = user ?? Context.Message.Author;
+            var userArg = socketUser ?? Context.Message.Author;
+            var user = User.users.Find(x => x.Equals(userArg.Id)) ?? null;
 
-            if (user != null && ((Context.Message.Author.Id != 343156949958787075) && !Context.Message.Author.Equals(user)))
-            {
-                Console.WriteLine("Refused kick command from user " + Context.Message.Author.Username + "#" + Context.Message.Author.Discriminator);
-                return ReplyAsync("<@" + Context.Message.Author.Id + "> You have no permission to kick other players.");
-            }
+            if (Context.Message.Author.Equals(userArg))
 
-            string arkPlayerSteamID = Program.GetPlayerSteamID(userInfo);
-            if (arkPlayerSteamID == "0")
+
+            if (user == null)
             {
-                Console.WriteLine("Kick player failed because there is no ark player for " + userInfo.Username + "#" + userInfo.Discriminator);
+                Console.WriteLine("Kick player failed because there is no ark player for " + userArg.Username + "#" + userArg.Discriminator);
                 return ReplyAsync("<@" + Context.Message.Author.Id + "> This discord user does not have an ark character or has not been unlocked yet.");
             }
 
-            Process proc = new Process();
-            ProcessStartInfo procStartInfo = new ProcessStartInfo("arkmanager", "rconcmd \"kickplayer " + arkPlayerSteamID + "\" @all");
-            proc.StartInfo = procStartInfo;
-            proc.Start();
-            proc.WaitForExit();
 
-            if (proc.ExitCode == 0)
-            {
-                Console.WriteLine("Kicked player " + userInfo.Username + "#" + userInfo.Discriminator + " from ark servers");
-                return ReplyAsync("<@" + userInfo.Id + "> Your character has been kicked from all ark servers of the cluster.");
-            }
-            else
-            {
-                Console.WriteLine("Error while trying to kick player " + userInfo.Username + "#" + userInfo.Discriminator);
-                return ReplyAsync("<@" + userInfo.Id + "> An unknown error occured... :(");
-            }
+
+
+            //if (user != null && ((Context.Message.Author.Id != 343156949958787075) && !Context.Message.Author.Equals(user)))
+            //{
+            //    Console.WriteLine("Refused kick command from user " + Context.Message.Author.Username + "#" + Context.Message.Author.Discriminator);
+            //    return ReplyAsync("<@" + Context.Message.Author.Id + "> You have no permission to kick other players.");
+            //}
+
+            //string arkPlayerSteamID = Program.GetPlayerSteamID(userInfo);
+            //if (arkPlayerSteamID == "0")
+            //{
+            //    Console.WriteLine("Kick player failed because there is no ark player for " + userInfo.Username + "#" + userInfo.Discriminator);
+            //    return ReplyAsync("<@" + Context.Message.Author.Id + "> This discord user does not have an ark character or has not been unlocked yet.");
+            //}
+
+            //Process proc = new Process();
+            //ProcessStartInfo procStartInfo = new ProcessStartInfo("arkmanager", "rconcmd \"kickplayer " + arkPlayerSteamID + "\" @all");
+            //proc.StartInfo = procStartInfo;
+            //proc.Start();
+            //proc.WaitForExit();
+
+            //if (proc.ExitCode == 0)
+            //{
+            //    Console.WriteLine("Kicked player " + userInfo.Username + "#" + userInfo.Discriminator + " from ark servers");
+            //    return ReplyAsync("<@" + userInfo.Id + "> Your character has been kicked from all ark servers of the cluster.");
+            //}
+            //else
+            //{
+            //    Console.WriteLine("Error while trying to kick player " + userInfo.Username + "#" + userInfo.Discriminator);
+            //    return ReplyAsync("<@" + userInfo.Id + "> An unknown error occured... :(");
+            //}
         }
     }
 }

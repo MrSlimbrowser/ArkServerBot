@@ -26,14 +26,22 @@ namespace ArkServerBot
             SteamID = steamID;
         }
 
+        public bool Equals(UInt64 socketUserID)
+        {
+            if (DiscordUser == socketUserID)
+                return true;
+            else
+                return false;
+        }
+
         public static void PopulateUserList(DiscordSocketClient discordSocketClient)
         {
             users.Add(new User("MrSlimbrowser", 343156949958787075, Group.groups.Find(x => x.Equals("Admin")) , "76561198039729283"));
-            users.Add(new User("billy", 469318430240014338, Group.groups.Find(x => x.Equals("User")), "76561198376251838"));
+            users.Add(new User("Billy", 469318430240014338, Group.groups.Find(x => x.Equals("User")), "76561198376251838"));
             users.Add(new User("Brownbear", 171370995863650305, Group.groups.Find(x => x.Equals("Admin")), "76561198091347562"));
             users.Add(new User("Cyanide", 371780776246771713, Group.groups.Find(x => x.Equals("User")), "76561197974929457"));
             users.Add(new User("Rollo", 328561358608269323, Group.groups.Find(x => x.Equals("User")), "76561198089259919"));
-            users.Add(new User("rollyrolls", 144581855146934273, Group.groups.Find(x => x.Equals("User")), "76561198168636810"));
+            users.Add(new User("RollyRolls", 144581855146934273, Group.groups.Find(x => x.Equals("User")), "76561198168636810"));
             users.Add(new User("Solar", 136285384073019392, Group.groups.Find(x => x.Equals("User")), "76561198006677979"));
             users.Add(new User("Cody", 468961595477983242, Group.groups.Find(x => x.Equals("User")), "76561198126255307"));
             users.Add(new User("ToyMaker", 305866447865905152, Group.groups.Find(x => x.Equals("User")), "76561198104394879"));
@@ -63,11 +71,6 @@ namespace ArkServerBot
             CanVoteRestartServer = canVoteRestartServer;
             CanVoteDelayUpdate = canVoteDelayUpdate;
             CanKickOtherPlayers = canKickOtherPlayers;
-        }
-
-        public override bool Equals(object obj)
-        {
-            return base.Equals(obj);
         }
 
         public bool Equals(string groupName)
