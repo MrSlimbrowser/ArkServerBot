@@ -13,6 +13,7 @@ namespace ArkServerBot
         private DiscordSocketClient _client;
         private CommandService _commandservice = new CommandService();
         private CommandHandler _commandHandler;
+        public const bool isTestAssembly = true;
 
     public static string GetPlayerSteamID(SocketUser user)
     {
@@ -58,11 +59,11 @@ namespace ArkServerBot
         public async Task MainAsync()
         {
             _client = new DiscordSocketClient();
+
             _commandHandler = new CommandHandler(_client, _commandservice);
 
             _client.Log += Log;
             _client.MessageReceived += MessageReceived;
-
             await _commandHandler.InstallCommandsAsync();
 
             // Remember to keep token private or to read it from an 
@@ -73,6 +74,9 @@ namespace ArkServerBot
             // a configuration.
             await _client.LoginAsync(TokenType.Bot, "NjY2NzY3MzE1NTkzMDY4NTY2.Xh5CVQ.3CIWCR5oqlvhePamhwdswEK5bkY");
             await _client.StartAsync();
+
+            Group.PopulateGroupList();
+            User.PopulateUserList(_client);
 
             // Block this task until the program is closed.
             await Task.Delay(-1);
@@ -119,11 +123,6 @@ namespace ArkServerBot
             // Don't process the command if it was a system message
             var message = messageParam as SocketUserMessage;
             if (message == null) return;
-            // Don't process the command if it's not on ark-control channel or in a private message
-            if (message.Channel.GetType().ToString() == "Discord.WebSocket.SocketDMChannel")
-            { }
-            else if (message.Channel.Name != "ark-control")
-                return;
 
             // Create a number to track where the prefix ends and the command begins
             int argPos = 0;
@@ -133,6 +132,20 @@ namespace ArkServerBot
                 message.HasMentionPrefix(_client.CurrentUser, ref argPos)) ||
                 message.Author.IsBot)
                 return;
+
+            // Don't process the command if it's not on ark-control channel or in a private message
+            // and only process commands by MrSlimbrowser if isTestAssembly is true
+            if (Program.isTestAssembly && message.Author.Id != 343156949958787075)
+            {
+                await message.Channel.SendMessageAsync("Sorry, I am currently in testmode because Slim is " +
+                    "despairingly trying to improve me... but I'll be there for you again once he is done :)");
+                return;
+            }
+            else if (message.Channel.GetType().ToString() != "Discord.WebSocket.SocketDMChannel"
+                && message.Channel.Name != "ark-control")
+            {
+                return;
+            }
 
             // Create a WebSocket-based command context based on the message
             var context = new SocketCommandContext(_client, message);
