@@ -36,9 +36,9 @@ namespace ArkServerBot
 
         public static void PopulateUserList(DiscordSocketClient discordSocketClient)
         {
-            users.Add(new User("MrSlimbrowser", 343156949958787075, Group.groups.Find(x => x.Equals("Admin")) , "76561198039729283"));
+            users.Add(new User("MrSlimbrowser", 343156949958787075, Group.groups.Find(x => x.Equals("User")) , "76561198039729283"));
             users.Add(new User("Billy", 469318430240014338, Group.groups.Find(x => x.Equals("User")), "76561198376251838"));
-            users.Add(new User("Brownbear", 171370995863650305, Group.groups.Find(x => x.Equals("Admin")), "76561198091347562"));
+            users.Add(new User("Brownbear", 171370995863650305, Group.groups.Find(x => x.Equals("User")), "76561198091347562"));
             users.Add(new User("Cyanide", 371780776246771713, Group.groups.Find(x => x.Equals("User")), "76561197974929457"));
             users.Add(new User("Rollo", 328561358608269323, Group.groups.Find(x => x.Equals("User")), "76561198089259919"));
             users.Add(new User("RollyRolls", 144581855146934273, Group.groups.Find(x => x.Equals("User")), "76561198168636810"));
