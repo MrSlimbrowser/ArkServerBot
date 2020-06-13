@@ -79,6 +79,7 @@ namespace ArkServerBot
 
             Group.PopulateGroupList();
             User.PopulateUserList(_client);
+            Server.PopulateServerList();
 
             // Block this task until the program is closed.
             await Task.Delay(-1);
