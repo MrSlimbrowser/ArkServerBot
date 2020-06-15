@@ -250,7 +250,7 @@ namespace ArkServerBot
 #else
             proc.Start();
             proc.WaitForExit();
-            exitCode = prox.ExitCode;
+            exitCode = proc.ExitCode;
 #endif
             if (exitCode == 0)
             {
