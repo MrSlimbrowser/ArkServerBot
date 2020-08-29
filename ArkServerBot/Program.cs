@@ -1,11 +1,10 @@
-﻿using System;
-using System.Threading.Tasks;
-using Discord;
-using Discord.WebSocket;
+﻿using Discord;
 using Discord.Commands;
-using System.Reflection;
+using Discord.WebSocket;
+using System;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
+using System.Reflection;
+using System.Threading.Tasks;
 
 namespace ArkServerBot
 {
@@ -14,43 +13,13 @@ namespace ArkServerBot
         private DiscordSocketClient _client;
         private CommandService _commandservice = new CommandService();
         private CommandHandler _commandHandler;
+#if DEBUG
         public const bool isTestAssembly = true;
+#else
+        public const bool isTestAssembly = false;
+#endif
 
-
-    //public static string GetPlayerSteamID(SocketUser user)
-    //{
-    //    switch (user.Id)
-    //        {
-    //            case 343156949958787075: // MrSlimbrowser
-    //                return "76561198039729283";
-    //            case 469318430240014338: // billy
-    //                return "76561198376251838";
-    //            case 171370995863650305: // Brownbear
-    //                return "76561198091347562";
-    //            case 371780776246771713: // Cyanide
-    //                return "76561197974929457";
-    //            case 328561358608269323: // Rollo
-    //                return "76561198089259919";
-    //            case 144581855146934273: // rollyrolls
-    //                return "76561198168636810";
-    //            case 136285384073019392: // Solar
-    //                return "76561198006677979";
-    //            case 468961595477983242: // Cody
-    //                return "76561198126255307";
-    //            case 305866447865905152: // Toy
-    //                return "76561198104394879";
-    //            case 131266736908402688: // Queen
-    //                return "76561198027404004";
-    //            case 228754341450874884: // XionX
-    //                return "76561197980675897";
-    //            case 279109755757395968: // clay
-    //                return "76561198128127255";
-    //            default:
-    //                return "0";
-    //        }
-    //}
-
-    public static void Main(string[] args)
+        public static void Main(string[] args)
     => new Program().MainAsync().GetAwaiter().GetResult();
 
         private Task Log(LogMessage msg)
@@ -174,6 +143,8 @@ namespace ArkServerBot
 
     public class InfoModule : ModuleBase<SocketCommandContext>
     {
+        private bool isServerCommandRunning = false;
+
         //// ~say hello world -> hello world
         //[Command("say")]
         //[Summary("Echoes a message.")]
@@ -192,15 +163,22 @@ namespace ArkServerBot
         [Summary("Returns information about supported commands")]
         public Task Help()
             => ReplyAsync("Hi <@" + Context.Message.Author.Id + ">, I'm here to assist you :)\r\n" +
-                "You can message me a command to make me do something. Notice, that all commands start with an exclamation mark.\r\n" +
+                "You can tell me what to do by messaging me. Notice, that all commands start with an exclamation mark.\r\n" +
                 "Commands will work on the ark-control channel or on a private chat with me.\r\n" +
+                "Some commands require a mapname. Mapnames don't need to be written-out as long as the partial mapname is unmistakable." +
                 "Following commands are available:\r\n" +
                 "  !help\r\n" +
                 "         Shows this help\r\n" +
                 "  !kick\r\n" +
                 "         Kicks your ark character from any server of the cluster\r\n" +
+                "  !start mapname\r\n" +
+                "         Starts the specified server\r\n" +
+                "  !stop mapname\r\n" +
+                "         Stops the specified server\r\n" +
                 "  !id\r\n" +
-                "         Shows your personal unique discord user ID" +
+                "         Shows your personal unique discord user ID\r\n" +
+                "  !listplayers mapname\r\n" +
+                "         Lists all players connected to the specified server\r\n" +
                 "");
 
         [Command("ShowID")]
@@ -219,6 +197,7 @@ namespace ArkServerBot
             // userArg is either the sender or a user specified by an argument
             // userArgInt is that same user but as an object of the ArkServerBot-Class "User"
             // sender is the message author just to shorten things from this point on
+            // senderInt is that same user but as an object of the ArkServerBot-Class "User"
             var userArg = socketUser ?? Context.Message.Author;
             var userArgInt = User.users.Find(x => x.Equals(userArg.Id)) ?? null;
             var sender = Context.Message.Author;
@@ -242,12 +221,12 @@ namespace ArkServerBot
                 return ReplyAsync("<@" + sender.Id + "> That user does not have an ark character.");
             }
 
-            Process proc = new Process();
-            proc.StartInfo = new ProcessStartInfo("arkmanager", "rconcmd \"kickplayer " + userArgInt.SteamID + "\" @all");
             int exitCode;
 #if DEBUG
             exitCode = 0;
 #else
+            Process proc = new Process();
+            proc.StartInfo = new ProcessStartInfo("arkmanager", "rconcmd \"kickplayer " + userArgInt.SteamID + "\" @all");
             proc.Start();
             proc.WaitForExit();
             exitCode = proc.ExitCode;
@@ -261,6 +240,189 @@ namespace ArkServerBot
             {
                 Console.WriteLine("Error while trying to kick player " + userArg.Username + "#" + userArg.Discriminator);
                 return ReplyAsync("<@" + userArg.Id + "> An error occured... maybe one of the servers is down? :(");
+            }
+        }
+
+        [Command("start")]
+        [Summary("enables/starts selected server")]
+        public Task EnableServer(String servername = null)
+        {
+            // sender is the message author just to shorten things from this point on
+            // senderInt is that same user but as an object of the ArkServerBot-Class "User"
+            var sender = Context.Message.Author;
+            var senderInt = User.users.Find(x => x.Equals(sender.Id)) ?? null;
+
+            if (senderInt == null)
+            {
+                Console.WriteLine("Start server failed because user " + sender.Username + "#" + sender.Discriminator + " has not been unlocked for commands yet.");
+                return ReplyAsync("<@" + sender.Id + "> This discord user has not been unlocked for commands yet.");
+            }
+
+            if (Context.Message.Channel.Name != "ark-control")
+            {
+                Console.WriteLine("Blocked start command by user " + sender.Username + "#" + sender.Discriminator + " because message was a DM.");
+                return ReplyAsync("<@" + sender.Id + "> This command can only be used in the ark-control channel.");
+            }
+
+            if (!senderInt.Group.CanVoteStartServer)
+            {
+                Console.WriteLine("Start server failed because user " + sender.Username + "#" + sender.Discriminator + " has no permission to start servers.");
+                return ReplyAsync("<@" + sender.Id + "> You have no permission to start servers.");
+            }
+
+            Server server = Server.FindServer(servername);
+            if (server == null)
+            {
+                Console.WriteLine("Start server failed because user " + sender.Username + "#" + sender.Discriminator + " has not given clear servername");
+                return ReplyAsync("<@" + sender.Id + "> A server with this name does not exist or given name is mistakable.");
+            }
+
+            if (isServerCommandRunning)
+            {
+                Console.WriteLine("Blocked command by user " + sender.Username + "#" + sender.Discriminator + " because another server command is running already.");
+                return ReplyAsync("<@" + sender.Id + "> Another request to start/stop a server is currently being processed. Please wait for it to finish and try again.");
+            }
+
+            isServerCommandRunning = true;
+            int exitcode = server.EnableServer();
+            isServerCommandRunning = false;
+
+            if (exitcode == 0)
+            {
+                Console.WriteLine("Server " + server.CustomName + " has been started by " + sender.Username + "#" + sender.Discriminator);
+                return ReplyAsync("<@" + sender.Id + "> Server " + server.CustomName + " is starting and should be up in a few minutes.");
+            }
+            else if (exitcode == 2)
+            {
+                Console.WriteLine(sender.Username + "#" + sender.Discriminator + " requested to start a server, but the server limit has been reached.");
+                return ReplyAsync("<@" + sender.Id + "> The maximum amount of servers allowed to run has been reached. Please stop any other server first before trying to start another one.");
+            }
+            else if (exitcode == 4)
+            {
+                Console.WriteLine("Error while starting server (instance config file couldn't be moved) " + server.CustomName + " , Requester: " + sender.Username + "#" + sender.Discriminator);
+                return ReplyAsync("<@" + sender.Id + "> Server " + server.CustomName + " couldn't be started, it's configuration file is missing or broken. Notifying <@343156949958787075>.");
+            }
+            else
+            {
+                Console.WriteLine("Error while starting server " + server.CustomName + " , Requester: " + sender.Username + "#" + sender.Discriminator);
+                return ReplyAsync("<@" + sender.Id + "> Server " + server.CustomName + " failed to start :(");
+            }
+        }
+
+        [Command("stop")]
+        [Summary("disables/stops selected server")]
+        public Task DisableServer(String servername = null)
+        {
+            // sender is the message author just to shorten things from this point on
+            // senderInt is that same user but as an object of the ArkServerBot-Class "User"
+            var sender = Context.Message.Author;
+            var senderInt = User.users.Find(x => x.Equals(sender.Id)) ?? null;
+
+            if (senderInt == null)
+            {
+                Console.WriteLine("Stop server failed because user " + sender.Username + "#" + sender.Discriminator + " has not been unlocked for commands yet.");
+                return ReplyAsync("<@" + sender.Id + "> This discord user has not been unlocked for commands yet.");
+            }
+
+            if (Context.Message.Channel.Name != "ark-control")
+            {
+                Console.WriteLine("Blocked stop command by user " + sender.Username + "#" + sender.Discriminator + " because message was a DM.");
+                return ReplyAsync("<@" + sender.Id + "> This command can only be used in the ark-control channel.");
+            }
+
+            if (!senderInt.Group.CanVoteStopServer)
+            {
+                Console.WriteLine("Stop server failed because user " + sender.Username + "#" + sender.Discriminator + " has no permission to start servers.");
+                return ReplyAsync("<@" + sender.Id + "> You have no permission to stop servers.");
+            }
+
+            Server server = Server.FindServer(servername);
+            if (server == null)
+            {
+                Console.WriteLine("Stop server failed because user " + sender.Username + "#" + sender.Discriminator + " has not given clear servername");
+                return ReplyAsync("<@" + sender.Id + "> A server with this name does not exist.");
+            }
+
+            if (isServerCommandRunning)
+            {
+                Console.WriteLine("Blocked command by user " + sender.Username + "#" + sender.Discriminator + " because another server command is running already.");
+                return ReplyAsync("<@" + sender.Id + "> Another request to start/stop a server is currently being processed. Please wait for it to finish and try again.");
+            }
+
+            isServerCommandRunning = true;
+            int exitcode = server.DisableServer();
+            isServerCommandRunning = false;
+
+            if (exitcode == 0)
+            {
+                Console.WriteLine("Server " + server.CustomName + " has been stopped by " + sender.Username + "#" + sender.Discriminator);
+                return ReplyAsync("<@" + sender.Id + "> Server " + server.CustomName + " has been stopped.");
+            }
+            else if (exitcode == 2)
+            {
+                Console.WriteLine("Blocked command by user " + sender.Username + "#" + sender.Discriminator + " because server is not empty");
+                return ReplyAsync("<@" + sender.Id + "> Server " + server.CustomName + " is not empty. Ask all players to leave and try again.");
+            }
+            else
+            {
+                Console.WriteLine("Error while stopping server " + server.CustomName + " , Requester: " + sender.Username + "#" + sender.Discriminator);
+                return ReplyAsync("<@" + sender.Id + "> An error occured while stopping the server " + server.CustomName + " :(");
+            }
+        }
+
+        [Command("listplayers")]
+        [Summary("lists players on server")]
+        public Task ListPlayers(String servername = null)
+        {
+            var sender = Context.Message.Author;
+
+            if (servername == null)
+            {
+                Console.WriteLine("Listing players failed because user " + sender.Username + "#" + sender.Discriminator + " has not given a servername");
+                return ReplyAsync("<@" + sender.Id + "> You must specify a servername.");
+            }
+
+            Server server = Server.FindServer(servername);
+            if (server == null)
+            {
+                Console.WriteLine("Listing players failed because user " + sender.Username + "#" + sender.Discriminator + " has not given clear servername");
+                return ReplyAsync("<@" + sender.Id + "> A server with this name does not exist.");
+            }
+            else
+            {
+                server.GetPlayers();
+                string output = String.Empty;
+                string playerName = String.Empty;
+
+                foreach (string playerID in server.PlayerIDs)
+                {
+                    // find player in List
+                    foreach (User user in User.users)
+                    {
+                        if (user.SteamID.Equals(playerID))
+                        {
+                            playerName = user.CustomName;
+                            break;
+                        }
+                        else
+                        {
+                            playerName = "unknown player";
+                        }
+                    }
+
+                    if (output == String.Empty)
+                    {
+                        output = playerID + " (" + playerName + ")";
+                    }
+                    else
+                    {
+                        output = ", " + playerID + " (" + playerName + ")";
+                    }
+                }
+                if (output == String.Empty)
+                    return ReplyAsync("<@" + sender.Id + "> There are no players connected to this server.");
+                else
+                    return ReplyAsync("<@" + sender.Id + "> Connected players: " + output);
             }
         }
     }

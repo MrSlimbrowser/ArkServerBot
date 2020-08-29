@@ -1,46 +1,152 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
-using System.Threading.Tasks;
-using System.Reflection;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 
 namespace ArkServerBot
 {
     class Server
     {
         public static List<Server> servers = new List<Server>();
+        // always set when server is being started/stopped/... and check it first to avoid two running commands that would interfere
+        private static string configPath = "/etc/arkmanager/instances/";
+        public static int maxServersRunning = 5;
 
         public string CustomName { get; }
         public string ConfigName { get; } //without file extension
-        public int PlayerCount { get; private set; }
-        public List<String> PlayerIDs { get; private set; }
+        public List<String> PlayerIDs = new List<string>();
+        public bool IsEnabled
+        {
+            get
+            {
+                try
+                {
+                    if (File.Exists(configPath + this.ConfigName + ".cfg"))
+                        return true;
+                    else
+                        return false;
+                }
+                catch { return false; }
+            }
+        }
 
         public Server(string customName, string configName)
         {
             CustomName = customName;
             ConfigName = configName;
-
         }
 
         public static void PopulateServerList()
         {
-            servers.Add(new Server("Abberation", "abberation"));
+            servers.Add(new Server("Abberation", "aberration"));
             servers.Add(new Server("Extinction", "extinction"));
             servers.Add(new Server("Genesis", "genesis"));
-            servers.Add(new Server("Ragnarok", "ragnarok"));
             servers.Add(new Server("ScorchedEarth", "scorchedearth"));
             servers.Add(new Server("TheIsland", "theisland"));
             servers.Add(new Server("Valguero", "valguero"));
+            servers.Add(new Server("CrystalIsles", "crystalisles"));
         }
 
-        private bool GetPlayers()
+        public static Server FindServer(string searchstring)
         {
+            if (searchstring == null)
+                return null;
+
+            searchstring = searchstring.ToLower();
+            Server found = null;
+            int findings = 0;
+            foreach (Server server in servers)
+            {
+                if (server.CustomName.Contains(searchstring) || server.ConfigName.Contains(searchstring))
+                {
+                    found = server;
+                    findings++;
+                }
+            }
+            if (findings == 1)
+                return found;
+            else
+                return null;
+        }
+
+        public bool GetPlayers()
+        {
+#if DEBUG
+            string output = "x 12345678911234567 0123456789112345678";
+#else
             Process proc = new Process();
             proc.StartInfo = new ProcessStartInfo("arkmanager", "rconcmd \"listplayers\" @" + this.ConfigName);
             proc.StartInfo.RedirectStandardOutput = true;
+            proc.Start();
+            proc.WaitForExit();
+
+            if (proc.ExitCode != 0)
+                return false;
+            string output = proc.StandardOutput.ReadToEnd();
+#endif
+
+            // walk trough output char by char and search for numeral strings of length 17 (steamID-Length)
+            this.PlayerIDs.Clear();
+            string findings = String.Empty;
+            for (int i = 0; i < output.Length; i++)
+            {
+                int tryParseDummy;
+                long foundID;
+
+                if (findings.Length == 17)
+                {
+                    if (Int64.TryParse(findings, out foundID))
+                    {
+                        this.PlayerIDs.Add(findings);
+                    }
+                    else
+                        findings = String.Empty;
+                }
+
+                if (int.TryParse(output[i].ToString(), out tryParseDummy))
+                {
+                    findings = findings + output[i];
+                }
+                else
+                {
+                    findings = String.Empty;
+                }
+            }
+            return true;
+        }
+
+        private void SaveWorld()
+        {
+            Process proc = new Process();
+            proc.StartInfo = new ProcessStartInfo("arkmanager", "saveworld @" + this.ConfigName);
+#if DEBUG
+
+#else
+            proc.Start();
+            proc.WaitForExit();
+#endif
+        }
+
+        private int StopServer()
+        {
+            /*
+             * STATUS-CODES:
+             * 0    success
+             * 1    general error
+             * 2    server not empty
+             */
+
+            // check if server is empty
+            this.GetPlayers();
+            if (this.PlayerIDs.Count > 0)
+            {
+                return 2;
+            }
+
+            // Stop server
+            this.SaveWorld();
+            Process proc = new Process();
+            proc.StartInfo = new ProcessStartInfo("arkmanager", "stop @" + this.ConfigName);
             int exitCode;
 #if DEBUG
             exitCode = 0;
@@ -48,78 +154,97 @@ namespace ArkServerBot
             proc.Start();
             proc.WaitForExit();
             exitCode = proc.ExitCode;
-            StreamReader reader = proc.StandardOutput;
-            string output = reader.ReadToEnd();
-            if (reader is IDisposable)
-            {
-                reader.Dispose();
-            }
-            if (output.Contains("No Players Connected"))
-            {
-                this.PlayerCount = 0;
-                this.PlayerIDs.Clear();
-            }
-            // Todo Count if "0. " or "1. " appears in string
-            for (int i = 0; i == i; i++)
-            {
-                int startindex = output.IndexOf(i + ". ");
-                if (startindex >= 1)
-                {
-                    this.PlayerCount++;
-                }
-                else 
-                {
-                    // retrieved all connected Players
-                    break;
-                }
-
-                // Try to determine this players ID
-                // ToDo: may fail if name consists initial searchstring, needs more checks
-                startindex = output.IndexOf("‭76561", startindex);
-                string playerID = output.Substring(startindex, 17);
-                long tempOutput;
-                if (Int64.TryParse(playerID, out tempOutput))
-                {
-                    this.PlayerIDs.Add(playerID);
-                }
-            }
 #endif
+            if (exitCode == 0)
+                return 0;
+            else
+                return 1;
         }
 
+        private int StartServer()
+        {
+            /*
+             * STATUS-CODES:
+             * 0    success
+             * 1    general error
+            */
 
+            // Start server
+            Process proc = new Process();
+            proc.StartInfo = new ProcessStartInfo("sudo", "systemctl start arkmanager@" + this.ConfigName);
+            int exitCode;
+#if DEBUG
+            exitCode = 0;
+#else
+            proc.Start();
+            proc.WaitForExit();
+            exitCode = proc.ExitCode;
+#endif
+            if (exitCode == 0)
+                return 0;
+            else
+                return 1;
+        }
 
+        public int DisableServer()
+        {
+            /*
+             * STATUS-CODES:
+             * 0    success
+             * 1    general error
+             * 2    Server not empty
+             * 4    Server configurationfile missing or broken
+            */
 
-//        private int StopServer(Server server)
-//        {
-//            /*
-//             * STATUS-CODES:
-//             * 0    success
-//             * 1    general error
-//             * 2    server not empty
-//             */
+            if (!IsEnabled)
+                return 0;
 
-//            Process proc = new Process();
-//            proc.StartInfo = new ProcessStartInfo("arkmanager", "rconcmd \"kickplayer " + userArgInt.SteamID + "\" @all");
-//            int exitCode;
-//#if DEBUG
-//            exitCode = 0;
-//#else
-//            proc.Start();
-//            proc.WaitForExit();
-//            exitCode = prox.ExitCode;
-//#endif
-//            if (exitCode == 0)
-//            {
-//                Console.WriteLine("Kicked player " + userArg.Username + "#" + userArg.Discriminator + " from ark servers");
-//                return ReplyAsync("<@" + userArg.Id + "> Your character has been kicked from all ark servers of the cluster.");
-//            }
-//            else
-//            {
-//                Console.WriteLine("Error while trying to kick player " + userArg.Username + "#" + userArg.Discriminator);
-//                return ReplyAsync("<@" + userArg.Id + "> An error occured... maybe one of the servers is down? :(");
-//            }
+            int tempResult = StopServer();
+            if (tempResult != 0)
+                return tempResult;
 
-//            return 0;
-//        }
+            try
+            {
+                File.Move(configPath + this.ConfigName + ".cfg", configPath + this.ConfigName + ".cfg.disabled");
+                return 0;
+            }
+            catch
+            {
+                return 1;
+            }
+        }
+
+        public int EnableServer()
+        {
+            /*
+             * STATUS-CODES:
+             * 0    success
+             * 1    general error (from StartServer-Method)
+             * 2    more than n servers are up already
+            */
+
+            if (IsEnabled)
+                return StartServer();
+
+            // check if max server limit has been reached
+            int tempServersEnabled = 0;
+            foreach (Server server in servers)
+            {
+                if (server.IsEnabled)
+                    tempServersEnabled++;
+            }
+            if (tempServersEnabled >= maxServersRunning)
+                return 2;
+
+            try
+            {
+                File.Move(configPath + this.ConfigName + ".cfg.disabled", configPath + this.ConfigName + ".cfg");
+                return StartServer();
+            }
+            catch
+            {
+                return 4;
+            }
+        }
     }
 }
