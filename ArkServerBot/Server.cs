@@ -39,12 +39,12 @@ namespace ArkServerBot
         public static void PopulateServerList()
         {
             servers.Add(new Server("Abberation", "aberration"));
+            servers.Add(new Server("CrystalIsles", "crystalisles"));
             servers.Add(new Server("Extinction", "extinction"));
             servers.Add(new Server("Genesis", "genesis"));
             servers.Add(new Server("ScorchedEarth", "scorchedearth"));
             servers.Add(new Server("TheIsland", "theisland"));
             servers.Add(new Server("Valguero", "valguero"));
-            servers.Add(new Server("CrystalIsles", "crystalisles"));
         }
 
         public static Server FindServer(string searchstring)

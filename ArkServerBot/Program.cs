@@ -3,6 +3,7 @@ using Discord.Commands;
 using Discord.WebSocket;
 using System;
 using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 
@@ -179,6 +180,8 @@ namespace ArkServerBot
                 "         Shows your personal unique discord user ID\r\n" +
                 "  !listplayers mapname\r\n" +
                 "         Lists all players connected to the specified server\r\n" +
+                "  !status\r\n" +
+                "         Lists currently enabled/disabled servers" +
                 "");
 
         [Command("ShowID")]
@@ -424,6 +427,39 @@ namespace ArkServerBot
                 else
                     return ReplyAsync("<@" + sender.Id + "> Connected players: " + output);
             }
+        }
+
+        [Command("status")]
+        [Summary("lists enabled and abailable servers")]
+        public Task ListServers()
+        {
+            var sender = Context.Message.Author;
+            string enabledServers = String.Empty;
+            string disabledServers = String.Empty;
+            
+            foreach (Server s in Server.servers)
+            {
+                if (s.IsEnabled)
+                {
+                    if (enabledServers == String.Empty)
+                        enabledServers = s.CustomName;
+                    else
+                        enabledServers = enabledServers + ", " + s.CustomName;
+                }
+                else
+                {
+                    if (disabledServers == String.Empty)
+                        disabledServers = s.CustomName;
+                    else
+                        disabledServers = disabledServers + ", " + s.CustomName;
+                }
+            }
+
+            return ReplyAsync(
+                "<@" + sender.Id + "> Currently, " + Server.maxServersRunning.ToString() + " servers are allowed to run at the same time.\r\n" +
+                "Enabled servers: " + enabledServers + " \r\n" +
+                "Disabled servers: " + disabledServers
+                );
         }
     }
 }
