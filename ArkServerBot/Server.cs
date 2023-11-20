@@ -10,7 +10,7 @@ namespace ArkServerBot
         public static List<Server> servers = new List<Server>();
         // always set when server is being started/stopped/... and check it first to avoid two running commands that would interfere
         private static string configPath = "/etc/arkmanager/instances/";
-        public static int maxServersRunning = 5;
+        public static int maxServersRunning = 3;
 
         public string CustomName { get; }
         public string ConfigName { get; } //without file extension
@@ -19,14 +19,10 @@ namespace ArkServerBot
         {
             get
             {
-                try
-                {
                     if (File.Exists(configPath + this.ConfigName + ".cfg"))
                         return true;
                     else
                         return false;
-                }
-                catch { return false; }
             }
         }
 
@@ -38,6 +34,7 @@ namespace ArkServerBot
 
         public static void PopulateServerList()
         {
+            /*
             servers.Add(new Server("Abberation", "aberration"));
             servers.Add(new Server("CrystalIsles", "crystalisles"));
             servers.Add(new Server("Extinction", "extinction"));
@@ -45,6 +42,8 @@ namespace ArkServerBot
             servers.Add(new Server("ScorchedEarth", "scorchedearth"));
             servers.Add(new Server("TheIsland", "theisland"));
             servers.Add(new Server("Valguero", "valguero"));
+            */
+            servers.Add(new Server("Fjordur", "fjordur"));
         }
 
         public static Server FindServer(string searchstring)

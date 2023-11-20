@@ -6,11 +6,13 @@ using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.IO;
 
 namespace ArkServerBot
 {
     class Program
     {
+        private DiscordSocketConfig _config;
         private DiscordSocketClient _client;
         private CommandService _commandservice = new CommandService();
         private CommandHandler _commandHandler;
@@ -30,8 +32,10 @@ namespace ArkServerBot
         }
         public async Task MainAsync()
         {
+            _config = new DiscordSocketConfig();
+            _config.GatewayIntents = GatewayIntents.MessageContent | GatewayIntents.AllUnprivileged;
 
-            _client = new DiscordSocketClient();
+            _client = new DiscordSocketClient(_config);
             _commandHandler = new CommandHandler(_client, _commandservice);
 
             _client.Log += Log;
@@ -44,11 +48,14 @@ namespace ArkServerBot
             // environment variables, you may find more information on the 
             // Internet or by using other methods such as reading from 
             // a configuration.
-            await _client.LoginAsync(TokenType.Bot, "NjY2NzY3MzE1NTkzMDY4NTY2.Xh5CVQ.3CIWCR5oqlvhePamhwdswEK5bkY");
+#if DEBUG
+            await _client.LoginAsync(TokenType.Bot, File.ReadAllText(".secrets\\discord_bot_token"));
+#else
+            await _client.LoginAsync(TokenType.Bot, File.ReadAllText(".secrets/discord_bot_token"));
+#endif
             await _client.StartAsync();
 
             Group.PopulateGroupList();
-            User.PopulateUserList(_client);
             Server.PopulateServerList();
 
             // Block this task until the program is closed.
@@ -163,10 +170,7 @@ namespace ArkServerBot
         [Command("help")]
         [Summary("Returns information about supported commands")]
         public Task Help()
-            => ReplyAsync("Hi <@" + Context.Message.Author.Id + ">, I'm here to assist you :)\r\n" +
-                "You can tell me what to do by messaging me. Notice, that all commands start with an exclamation mark.\r\n" +
-                "Commands will work on the ark-control channel or on a private chat with me.\r\n" +
-                "Some commands require a mapname. Mapnames don't need to be written-out as long as the partial mapname is unmistakable." +
+            => ReplyAsync(
                 "Following commands are available:\r\n" +
                 "  !help\r\n" +
                 "         Shows this help\r\n" +
@@ -182,6 +186,8 @@ namespace ArkServerBot
                 "         Lists all players connected to the specified server\r\n" +
                 "  !status\r\n" +
                 "         Lists currently enabled/disabled servers" +
+                "\r\n\r\nCommands will work on the ark-control channel or on a private chat with me.\r\n" +
+                "Some commands require a mapname. Mapnames don't need to be written-out as long as the partial mapname is unmistakable.\r\n" + 
                 "");
 
         [Command("ShowID")]
