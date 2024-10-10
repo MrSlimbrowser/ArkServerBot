@@ -17,7 +17,6 @@ namespace ArkServerBot
             //new Server("Valguero", "valguero"),
             new Server("Fjordur", "fjordur")
             ];
-        // always set when server is being started/stopped/... and check it first to avoid two running commands that would interfere
         readonly private static string configPath = "/etc/arkmanager/instances/";
         public static int maxServersRunning = 3;
 
