@@ -5,16 +5,25 @@ using System.IO;
 
 namespace ArkServerBot
 {
-    class Server
+    class Server(string customName, string configName)
     {
-        public static List<Server> servers = new List<Server>();
+        public static List<Server> servers = [
+            //new Server("Abberation", "aberration"),
+            //new Server("CrystalIsles", "crystalisles"),
+            //new Server("Extinction", "extinction"),
+            //new Server("Genesis", "genesis"),
+            //new Server("ScorchedEarth", "scorchedearth"),
+            //new Server("TheIsland", "theisland"),
+            //new Server("Valguero", "valguero"),
+            new Server("Fjordur", "fjordur")
+            ];
         // always set when server is being started/stopped/... and check it first to avoid two running commands that would interfere
-        private static string configPath = "/etc/arkmanager/instances/";
+        readonly private static string configPath = "/etc/arkmanager/instances/";
         public static int maxServersRunning = 3;
 
-        public string CustomName { get; }
-        public string ConfigName { get; } //without file extension
-        public List<String> PlayerIDs = new List<string>();
+        public string CustomName { get; } = customName;
+        public string ConfigName { get; } = configName;
+        public List<String> PlayerIDs = [];
         public bool IsEnabled
         {
             get
@@ -24,26 +33,6 @@ namespace ArkServerBot
                     else
                         return false;
             }
-        }
-
-        public Server(string customName, string configName)
-        {
-            CustomName = customName;
-            ConfigName = configName;
-        }
-
-        public static void PopulateServerList()
-        {
-            /*
-            servers.Add(new Server("Abberation", "aberration"));
-            servers.Add(new Server("CrystalIsles", "crystalisles"));
-            servers.Add(new Server("Extinction", "extinction"));
-            servers.Add(new Server("Genesis", "genesis"));
-            servers.Add(new Server("ScorchedEarth", "scorchedearth"));
-            servers.Add(new Server("TheIsland", "theisland"));
-            servers.Add(new Server("Valguero", "valguero"));
-            */
-            servers.Add(new Server("Fjordur", "fjordur"));
         }
 
         public static Server FindServer(string searchstring)
@@ -85,26 +74,23 @@ namespace ArkServerBot
 #endif
 
             // walk trough output char by char and search for numeral strings of length 17 (steamID-Length)
-            this.PlayerIDs.Clear();
+            PlayerIDs.Clear();
             string findings = String.Empty;
             for (int i = 0; i < output.Length; i++)
             {
-                int tryParseDummy;
-                long foundID;
-
                 if (findings.Length == 17)
                 {
-                    if (Int64.TryParse(findings, out foundID))
+                    if (Int64.TryParse(findings, out long foundID))
                     {
-                        this.PlayerIDs.Add(findings);
+                        PlayerIDs.Add(findings);
                     }
                     else
                         findings = String.Empty;
                 }
 
-                if (int.TryParse(output[i].ToString(), out tryParseDummy))
+                if (int.TryParse(output[i].ToString(), out int tryParseDummy))
                 {
-                    findings = findings + output[i];
+                    findings += output[i];
                 }
                 else
                 {
@@ -116,8 +102,10 @@ namespace ArkServerBot
 
         private void SaveWorld()
         {
-            Process proc = new Process();
-            proc.StartInfo = new ProcessStartInfo("arkmanager", "saveworld @" + this.ConfigName);
+            Process proc = new()
+            {
+                StartInfo = new ProcessStartInfo("arkmanager", "saveworld @" + this.ConfigName)
+            };
 #if DEBUG
 
 #else
@@ -144,8 +132,10 @@ namespace ArkServerBot
 
             // Stop server
             this.SaveWorld();
-            Process proc = new Process();
-            proc.StartInfo = new ProcessStartInfo("arkmanager", "stop @" + this.ConfigName);
+            Process proc = new()
+            {
+                StartInfo = new ProcessStartInfo("arkmanager", "stop @" + this.ConfigName)
+            };
             int exitCode;
 #if DEBUG
             exitCode = 0;
@@ -169,8 +159,10 @@ namespace ArkServerBot
             */
 
             // Start server
-            Process proc = new Process();
-            proc.StartInfo = new ProcessStartInfo("sudo", "systemctl start arkmanager@" + this.ConfigName);
+            Process proc = new()
+            {
+                StartInfo = new ProcessStartInfo("sudo", "systemctl start arkmanager@" + this.ConfigName)
+            };
             int exitCode;
 #if DEBUG
             exitCode = 0;

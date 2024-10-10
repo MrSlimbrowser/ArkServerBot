@@ -14,7 +14,7 @@ namespace ArkServerBot
     {
         private DiscordSocketConfig _config;
         private DiscordSocketClient _client;
-        private CommandService _commandservice = new CommandService();
+        readonly private CommandService _commandservice = new();
         private CommandHandler _commandHandler;
 #if DEBUG
         public const bool isTestAssembly = true;
@@ -22,7 +22,7 @@ namespace ArkServerBot
         public const bool isTestAssembly = false;
 #endif
 
-        public static void Main(string[] args)
+        public static void Main()
     => new Program().MainAsync().GetAwaiter().GetResult();
 
         private Task Log(LogMessage msg)
@@ -32,8 +32,10 @@ namespace ArkServerBot
         }
         public async Task MainAsync()
         {
-            _config = new DiscordSocketConfig();
-            _config.GatewayIntents = GatewayIntents.MessageContent | GatewayIntents.AllUnprivileged;
+            _config = new()
+            {
+                GatewayIntents = GatewayIntents.MessageContent | GatewayIntents.AllUnprivileged
+            };
 
             _client = new DiscordSocketClient(_config);
             _commandHandler = new CommandHandler(_client, _commandservice);
@@ -48,15 +50,8 @@ namespace ArkServerBot
             // environment variables, you may find more information on the 
             // Internet or by using other methods such as reading from 
             // a configuration.
-#if DEBUG
-            await _client.LoginAsync(TokenType.Bot, File.ReadAllText(".secrets\\discord_bot_token"));
-#else
-            await _client.LoginAsync(TokenType.Bot, File.ReadAllText(".secrets/discord_bot_token"));
-#endif
+            await _client.LoginAsync(TokenType.Bot, File.ReadAllText(Path.Combine("secrets", "discord_bot_token")));
             await _client.StartAsync();
-
-            Group.PopulateGroupList();
-            Server.PopulateServerList();
 
             // Block this task until the program is closed.
             await Task.Delay(-1);
@@ -70,16 +65,10 @@ namespace ArkServerBot
         }
     }
 
-    public class CommandHandler
+    public class CommandHandler(DiscordSocketClient client, CommandService commands)
     {
-        private readonly DiscordSocketClient _client;
-        private readonly CommandService _commands;
-
-        public CommandHandler(DiscordSocketClient client, CommandService commands)
-        {
-            _commands = commands;
-            _client = client;
-        }
+        private readonly DiscordSocketClient _client = client;
+        private readonly CommandService _commands = commands;
 
         public async Task InstallCommandsAsync()
         {
@@ -101,8 +90,7 @@ namespace ArkServerBot
         private async Task HandleCommandAsync(SocketMessage messageParam)
         {
             // Don't process the command if it was a system message
-            var message = messageParam as SocketUserMessage;
-            if (message == null) return;
+            if (messageParam is not SocketUserMessage message) return;
 
             // Create a number to track where the prefix ends and the command begins
             int argPos = 0;

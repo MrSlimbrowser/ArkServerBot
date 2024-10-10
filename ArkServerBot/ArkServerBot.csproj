@@ -2,15 +2,18 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net8.0</TargetFramework>
+    <StartupObject>ArkServerBot.Program</StartupObject>
   </PropertyGroup>
 
   <ItemGroup>
-    <Content Include=".secrets\discord_bot_token" />
+    <Content Include=".secrets\discord_bot_token">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Discord.Net" Version="3.13.0" />
+    <PackageReference Include="Discord.Net" Version="3.16.0" />
   </ItemGroup>
 
 </Project>

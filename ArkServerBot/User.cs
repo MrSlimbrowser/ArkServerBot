@@ -5,12 +5,12 @@ using System.Collections.Generic;
 
 namespace ArkServerBot
 {
-    public class User
+    public class User(string customName, UInt64 socketUserID, Group group, string steamID)
     {
-        private static Group groupAdmin = Group.groups.Find(x => x.Equals("Admin"));
-        private static Group groupUser = Group.groups.Find(x => x.Equals("User"));
+        readonly private static Group groupAdmin = Group.groups.Find(x => x.Equals("Admin"));
+        readonly private static Group groupUser = Group.groups.Find(x => x.Equals("User"));
 
-        public static List<User> users = new List<User> { 
+        readonly public static List<User> users = [ 
             new User("MrSlimbrowser", 343156949958787075, groupAdmin , "76561198039729283"),
             //new User("Billy", 469318430240014338, groupUser, "76561198376251838"),
             new User("Brownbear", 171370995863650305, groupUser, "76561198091347562"),
@@ -25,20 +25,12 @@ namespace ArkServerBot
             //new User("Clay", 279109755757395968, groupUser, "76561198128127255"),
             //new User("BarleyLightning", 123453702546653185, groupUser, "76561198020174519"),
             //new User("Uncanny", 126476526484062210, groupUser, "")
-        };
+        ];
 
-        public string CustomName { get; }
-        public UInt64 DiscordUser { get; }
-        public Group Group { get; }
-        public string SteamID { get; }
-
-        public User(string customName, UInt64 socketUserID, Group group, string steamID)
-        {
-            CustomName = customName;
-            DiscordUser = socketUserID;
-            Group = group;
-            SteamID = steamID;
-        }
+        public string CustomName { get; } = customName;
+        public UInt64 DiscordUser { get; } = socketUserID;
+        public Group Group { get; } = group;
+        public string SteamID { get; } = steamID;
 
         public bool Equals(UInt64 socketUserID)
         {
@@ -49,40 +41,25 @@ namespace ArkServerBot
         }
     }
 
-    public class Group
-    {
-        public static List<Group> groups = new List<Group>();
-
-        public string GroupName { get; }
-        public bool CanVoteStartServer { get; }
-        public bool CanVoteStopServer { get; }
-        public bool CanVoteRestartServer { get; }
-        public bool CanVoteDelayUpdate { get; }
-        public bool CanKickOtherPlayers { get; }
-
-        public Group(string groupName, bool canVoteStartServer = false, bool canVoteStopServer = false
+    public class Group(string groupName, bool canVoteStartServer = false, bool canVoteStopServer = false
             , bool canVoteRestartServer = false, bool canVoteDelayUpdate = false, bool canKickOtherPlayers = false)
-        {
-            GroupName = groupName;
-            CanVoteStartServer = canVoteStartServer;
-            CanVoteStopServer = canVoteStopServer;
-            CanVoteRestartServer = canVoteRestartServer;
-            CanVoteDelayUpdate = canVoteDelayUpdate;
-            CanKickOtherPlayers = canKickOtherPlayers;
-        }
+    {
+        readonly public static List<Group> groups = [
+            new Group("User",true,true,false,false,false),
+            new Group("Admin", true, true, true, true, true)
+            ];
+
+        public string GroupName { get; } = groupName;
+        public bool CanVoteStartServer { get; } = canVoteStartServer;
+        public bool CanVoteStopServer { get; } = canVoteStopServer;
+        public bool CanVoteRestartServer { get; } = canVoteRestartServer;
+        public bool CanVoteDelayUpdate { get; } = canVoteDelayUpdate;
+        public bool CanKickOtherPlayers { get; } = canKickOtherPlayers;
 
         public bool Equals(string groupName)
         {
             if (groupName == null) return false;
             return (this.GroupName.Equals(groupName));
-        }
-
-        public static void PopulateGroupList()
-        {
-            groups.Clear();
-            groups.Add(new Group("User",true,true,false,false,false));
-            groups.Add(new Group("Admin", true, true, true, true, true));
-        }
-        
+        }       
     }
 }
